@@ -71,6 +71,26 @@ dataset/output.csv
 
 ---
 
+## Evaluation
+
+Run the evaluation pipeline on the labeled sample dataset:
+
+```bash
+python3 src/evaluation_pipeline/main.py
+```
+
+This generates:
+
+- evaluation_report.md
+
+and reports:
+
+- Action accuracy
+- Message type accuracy
+- Average confidence
+
+---
+
 ## Installation
 
 ```bash
