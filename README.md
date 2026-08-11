@@ -1,5 +1,7 @@
 # AI Notification Routing System
 
+A prototype notification routing system that classifies incoming messages with personalized context and an LLM-backed routing decision.
+
 ## Overview
 
 An AI-powered notification routing system that classifies incoming messages into one of three actions:
@@ -79,9 +81,11 @@ Run the evaluation pipeline on the labeled sample dataset:
 python3 src/evaluation_pipeline/main.py
 ```
 
+This evaluates model predictions against the provided `dataset/sample_messages.csv` labeled examples.
+
 This generates:
 
-- evaluation_report.md
+- `src/evaluation_pipeline/evaluation_report.md`
 
 and reports:
 
@@ -97,11 +101,15 @@ and reports:
 pip install -r requirements.txt
 ```
 
+A Python 3.10+ interpreter is recommended for best compatibility.
+
 Create a `.env` file:
 
 ```text
 GEMINI_API_KEY=your_api_key_here
 ```
+
+The main application writes prediction output to `dataset/output.csv`.
 
 ---
 
