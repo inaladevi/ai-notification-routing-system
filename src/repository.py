@@ -73,6 +73,11 @@ class NotificationRepository:
         return pd.read_csv(self.dataset_dir / filename).fillna("")
 
     def _build_indexes(self):
+        # ---------- Users ----------
+        self.users_by_id = (
+            self.users.set_index("user_id")
+            .to_dict("index")
+        )
 
         # ---------- Groups ----------
         self.groups_by_id = (
