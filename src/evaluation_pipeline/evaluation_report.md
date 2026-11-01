@@ -9,6 +9,6 @@ The evaluation compares model predictions against the labeled sample messages pr
 ## Metrics
 
 - Total evaluated messages: **30**
-- Action accuracy: **26/30 (86.7%)**
-- Message type accuracy: **27/30 (90.0%)**
-- Average confidence: **0.931**
+- Action accuracy: **27/30 (90.0%)**
+- Message type accuracy: **25/30 (83.3%)**
+- Average confidence: **0.926**
