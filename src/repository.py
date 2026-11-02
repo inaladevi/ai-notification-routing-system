@@ -22,6 +22,8 @@ class NotificationRepository:
         self.message_history = None
         self.message_events = None
         self.daily_notification_summary = None
+        self.images = None
+        self.voice_notes = None
 
         # Lookup dictionaries
         self.users_by_id = {}
@@ -30,6 +32,8 @@ class NotificationRepository:
 
         self.group_members_by_key = {}
         self.user_business_by_key = {}
+
+        self.media_paths = {}
 
         self.events_by_message = {}
         self.notification_summary_by_user = defaultdict(list)
@@ -61,6 +65,9 @@ class NotificationRepository:
             "daily_notification_summary.csv"
         )
 
+        self.images = self._read_csv("images.csv")
+        self.voice_notes = self._read_csv("voice_notes.csv")
+
         self._build_indexes()
 
         return self
@@ -73,11 +80,18 @@ class NotificationRepository:
         return pd.read_csv(self.dataset_dir / filename).fillna("")
 
     def _build_indexes(self):
+
         # ---------- Users ----------
         self.users_by_id = (
             self.users.set_index("user_id")
             .to_dict("index")
         )
+
+        # ---------- Media (images and voice notes) ----------
+        for row in self.images.to_dict("records"):
+            self.media_paths[row["image_id"]] = row["file_path"]
+        for row in self.voice_notes.to_dict("records"):
+            self.media_paths[row["voice_note_id"]] = row["file_path"]
 
         # ---------- Groups ----------
         self.groups_by_id = (
@@ -160,6 +174,13 @@ class NotificationRepository:
 
     def get_notification_summary(self, user_id):
         return self.notification_summary_by_user.get(user_id, [])
+
+    def get_media_file(self, media_id):
+        """Absolute path of an image or voice-note file, or None if unknown."""
+        relative_path = self.media_paths.get(media_id)
+        if not relative_path:
+            return None
+        return self.dataset_dir / relative_path
 
     def get_messages(self):
         return self.messages.to_dict("records")

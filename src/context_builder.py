@@ -24,6 +24,9 @@ class ContextBuilder:
             "conversation": None,
             "history": self._get_history(message),
             "media": self._get_media(message),
+            # File to attach to the model call. Kept out of "media" so the
+            # local file path is not printed into the prompt text.
+            "media_file": self._get_media_file(message),
         }
 
         conversation_type = message["conversation_type"]
@@ -136,6 +139,7 @@ class ContextBuilder:
         for item in history:
             event = self.repo.get_message_event(item["message_id"])
             enriched.append({
+                "created_at": item.get("created_at") or "",
                 "message_id": item.get("message_id"),
                 "message_text": item.get("message_text"),
                 "sender_user_id": item.get("sender_user_id"),
@@ -145,7 +149,12 @@ class ContextBuilder:
                 "reported": event.get("message_reported") if event else None,
             })
 
-        return enriched[-2:]
+        # Most recent two messages, oldest first. The CSV is not sorted by time.
+        enriched.sort(key=lambda item: item["created_at"])
+        return [
+            {k: v for k, v in item.items() if k != "created_at"}
+            for item in enriched[-2:]
+        ]
 
     # ---------------------------------------------------------
     # Media
@@ -153,7 +162,18 @@ class ContextBuilder:
 
     def _get_media(self, message):
 
-        if not isinstance(message["media_type"], str):
+        media_type = message.get("media_type")
+        if not media_type:
             return None
 
-        return None
+        return {
+            "media_type": media_type,
+            "media_id": message.get("media_id"),
+        }
+
+    def _get_media_file(self, message):
+
+        if not message.get("media_type"):
+            return None
+
+        return self.repo.get_media_file(message.get("media_id"))

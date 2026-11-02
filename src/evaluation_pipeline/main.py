@@ -53,8 +53,10 @@ def predict_message(
     context_builder: ContextBuilder,
     router: Router,
     validator: Validator,
-) -> Dict[str, object]:
+) -> tuple:
+    """Returns (validated prediction, used_fallback)."""
     message_id = message["message_id"]
+    used_fallback = False
 
     try:
         context = context_builder.build_context(message)
@@ -66,8 +68,9 @@ def predict_message(
     except Exception as exc:
         print(f"WARNING: prediction failed for {message_id}: {exc}")
         prediction = validator.fallback_prediction(message_id)
+        used_fallback = True
 
-    return validator.validate(message_id, prediction)
+    return validator.validate(message_id, prediction), used_fallback
 
 
 def compute_metrics(
@@ -115,7 +118,8 @@ def format_percentage(value: float) -> str:
     return f"{value * 100:.1f}%"
 
 
-def write_report(report_path: Path, metrics: Dict[str, object], used_fallback: bool, model_name: str):
+def write_report(report_path: Path, metrics: Dict[str, object], used_fallback: bool, model_name: str,
+                 fallback_count: int = 0, answered_metrics: Dict[str, object] = None):
     router_status = "Enabled" if not used_fallback else "Disabled"
 
     lines = [
@@ -133,8 +137,18 @@ def write_report(report_path: Path, metrics: Dict[str, object], used_fallback: b
         f"- Action accuracy: **{metrics['correct_action_count']}/{metrics['total_messages']} ({format_percentage(metrics['action_accuracy'])})**",
         f"- Message type accuracy: **{metrics['correct_message_type_count']}/{metrics['total_messages']} ({format_percentage(metrics['message_type_accuracy'])})**",
         f"- Average confidence: **{metrics['average_confidence']:.3f}**",
+        f"- Fallback predictions (model did not answer): **{fallback_count}**",
         "",
     ]
+
+    if answered_metrics and answered_metrics["total_messages"] > 0 and fallback_count:
+        lines.extend([
+            "Accuracy on messages the model actually answered (fallbacks excluded):",
+            "",
+            f"- Action accuracy: **{answered_metrics['correct_action_count']}/{answered_metrics['total_messages']} ({format_percentage(answered_metrics['action_accuracy'])})**",
+            f"- Message type accuracy: **{answered_metrics['correct_message_type_count']}/{answered_metrics['total_messages']} ({format_percentage(answered_metrics['message_type_accuracy'])})**",
+            "",
+        ])
 
     if used_fallback:
         lines.extend([
@@ -158,12 +172,23 @@ def main():
     repo, context_builder, router, validator = initialize_pipeline(dataset_dir)
 
     predictions = []
+    fallback_flags = []
     for sample in sample_messages:
-        prediction = predict_message(sample, context_builder, router, validator)
+        prediction, used_fallback = predict_message(sample, context_builder, router, validator)
         predictions.append(prediction)
+        fallback_flags.append(used_fallback)
 
+    fallback_count = sum(fallback_flags)
     metrics = compute_metrics(predictions, sample_messages)
-    write_report(report_path, metrics, used_fallback=(router is None), model_name=os.getenv("EVALUATION_MODEL_NAME", "gemini-3.1-flash-lite"))
+
+    answered = [(p, m) for p, m, f in zip(predictions, sample_messages, fallback_flags) if not f]
+    answered_metrics = compute_metrics([p for p, _ in answered], [m for _, m in answered])
+
+    write_report(
+        report_path, metrics, used_fallback=(router is None),
+        model_name=os.getenv("EVALUATION_MODEL_NAME", "gemini-3.1-flash-lite"),
+        fallback_count=fallback_count, answered_metrics=answered_metrics,
+    )
 
     print("Evaluation results")
     print("------------------")
@@ -171,6 +196,9 @@ def main():
     print(f"Action accuracy: {format_percentage(metrics['action_accuracy'])}")
     print(f"Message type accuracy: {format_percentage(metrics['message_type_accuracy'])}")
     print(f"Average confidence: {metrics['average_confidence']:.3f}")
+    print(f"Fallback predictions: {fallback_count}/{metrics['total_messages']}")
+    if fallback_count:
+        print(f"Action accuracy excluding fallbacks: {format_percentage(answered_metrics['action_accuracy'])}")
     print(f"Report written to: {report_path}")
 
 
