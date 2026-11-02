@@ -1,4 +1,5 @@
 import json
+import mimetypes
 import os
 import re
 import time
@@ -28,9 +29,26 @@ class Router:
         self.request_interval_seconds = 6.0
         self.retry_base_delay_seconds = 60.0
 
+    def _build_contents(self, context, user_prompt):
+        """Text prompt, plus the image or voice-note file when the message has one."""
+        contents = [user_prompt]
+
+        media_file = context.get("media_file")
+        if media_file is not None:
+            if not os.path.exists(media_file):
+                raise FileNotFoundError(f"Media file not found: {media_file}")
+            mime_type, _ = mimetypes.guess_type(str(media_file))
+            if mime_type == "audio/mpeg" or str(media_file).endswith(".mp3"):
+                mime_type = "audio/mp3"
+            with open(media_file, "rb") as f:
+                contents.append(types.Part.from_bytes(data=f.read(), mime_type=mime_type))
+
+        return contents
+
     def route(self, context):
         system_prompt = SYSTEM_PROMPT
         user_prompt = build_user_prompt(context)
+        contents = self._build_contents(context, user_prompt)
 
         start = time.time()
 
@@ -48,7 +66,7 @@ class Router:
             try:
                 response = self.client.models.generate_content(
                     model=self.model_name,
-                    contents=user_prompt,
+                    contents=contents,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt,
                         temperature=0.1,

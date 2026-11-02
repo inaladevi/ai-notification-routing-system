@@ -10,6 +10,8 @@ Decide whether an incoming message should be routed as:
 
 Use the provided context only.
 
+Some messages are images or voice notes. For those, the message text may be empty and the attached image or audio is the message content: read or listen to it and use what it says.
+
 Priority order:
 1. Safety/suspicion
 2. Urgency
