@@ -53,7 +53,6 @@ output.csv
 ```
 src/
 dataset/
-docs/
 
 requirements.txt
 README.md

@@ -12,12 +12,7 @@ from prompts import SYSTEM_PROMPT, build_user_prompt
 
 class Router:
     def __init__(self, model_name="gemini-3.1-flash-lite"):
-        print(">>> USING MODEL:", model_name)
         load_dotenv()
-
-        print("Current working directory:", os.getcwd())
-        print("ENV loaded:", os.getenv("GEMINI_API_KEY") is not None)
-
 
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
